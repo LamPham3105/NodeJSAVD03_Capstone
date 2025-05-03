@@ -13,9 +13,9 @@ import { lastValueFrom } from 'rxjs';
 @Controller()
 export class AppController {
   constructor(
-    @Inject('RESTAURANT_NAME') private playlistService: ClientProxy,
+    @Inject('PLAYLIST_NAME') private playlistService: ClientProxy,
     @Inject('USER_NAME') private userService: ClientProxy,
-    @Inject('ORDER_NAME') private songService: ClientProxy,
+    @Inject('SONG_NAME') private songService: ClientProxy,
   ) {}
 
   //Playlist service

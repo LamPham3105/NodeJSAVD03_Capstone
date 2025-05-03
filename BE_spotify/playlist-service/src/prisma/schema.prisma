@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -63,6 +62,8 @@ model playlists {
   create_date    DateTime?        @default(now()) @db.Timestamp(6)
   playlist_songs playlist_songs[]
   users          users?           @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  playlist_follows playlist_follows[]
 }
 
 model songs {
@@ -102,10 +103,24 @@ model users {
   messages                                   messages[]
   playlists                                  playlists[]
   songs                                      songs[]
+
+  playlist_follows playlist_follows[]
 }
 
 enum user_role {
   admin
   Singer
   user
+}
+
+model playlist_follows {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  playlist_id Int
+  followed_at DateTime @default(now())
+
+  users     users     @relation(fields: [user_id], references: [user_id])
+  playlists playlists @relation(fields: [playlist_id], references: [id])
+
+  @@unique([user_id, playlist_id])
 }

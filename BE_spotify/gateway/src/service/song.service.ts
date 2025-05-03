@@ -5,7 +5,7 @@ import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class SongService {
-  constructor(@Inject('ORDER_NAME') private songService: ClientProxy) {}
+  constructor(@Inject('SONG_NAME') private songService: ClientProxy) {}
 
   async getAllGenres() {
     return await lastValueFrom(this.songService.send('get-all-genres', ''));

@@ -5,100 +5,126 @@ import { PrismaService } from './prisma/prisma.service';
 export class AppService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getAllPlaylists() {
-    return this.prisma.playlist.findMany({
-      include: { PlaylistSongs: true, User: true },
+  async getAllPlaylists() {
+    return await this.prisma.playlists.findMany({
+      include: {
+        playlist_songs: {
+          include: { songs: true },
+        },
+        users: true,
+      },
     });
   }
 
-  getPlaylistOfUser(userId: number) {
-    return this.prisma.playlist.findMany({
-      where: { userId },
-      include: { PlaylistSongs: true },
+  async getPlaylistOfUser(userId: number) {
+    return await this.prisma.playlists.findMany({
+      where: { user_id: userId },
+      include: {
+        playlist_songs: {
+          include: { songs: true },
+        },
+      },
     });
   }
 
-  addPlaylist(data: {
+  async addPlaylist(data: {
     userId: number;
     imagePath: string;
     playlistName: string;
     description: string;
     createDate: Date;
   }) {
-    return this.prisma.playlist.create({
-      data,
+    return await this.prisma.playlists.create({
+      data: {
+        user_id: data.userId,
+        image_path: data.imagePath,
+        playlist_name: data.playlistName,
+        description: data.description,
+        create_date: data.createDate,
+      },
     });
   }
 
-  addSongToPlaylist(data: { playlistId: number; songId: number[] }) {
-    const operations = data.songId.map((songId) =>
-      this.prisma.playlistSong.create({
+  async addSongToPlaylist(data: { playlistId: number; songId: number[] }) {
+    const operations = await data.songId.map((songId) =>
+      this.prisma.playlist_songs.create({
         data: {
-          playlistId: data.playlistId,
-          songId,
+          playlist_id: data.playlistId,
+          song_id: songId,
         },
       }),
     );
     return this.prisma.$transaction(operations);
   }
 
-  getSongsInPlaylist(playlistId: number) {
-    return this.prisma.playlistSong.findMany({
-      where: { playlistId },
-      include: { Song: true },
+  async getSongsInPlaylist(playlistId: number) {
+    return await this.prisma.playlist_songs.findMany({
+      where: { playlist_id: playlistId },
+      include: { songs: true },
     });
   }
 
-  editPlaylist(
+  async editPlaylist(
     playlistId: number,
     body: { playlistName: string; description: string },
   ) {
-    return this.prisma.playlist.update({
+    return await this.prisma.playlists.update({
       where: { id: playlistId },
       data: {
-        playlistName: body.playlistName,
+        playlist_name: body.playlistName,
         description: body.description,
       },
     });
   }
 
-  removePlaylist(playlistId: number) {
-    return this.prisma.playlist.delete({
+  async removePlaylist(playlistId: number) {
+    return await this.prisma.playlists.delete({
       where: { id: playlistId },
     });
   }
 
-  unfollowPlaylist(data: { userId: number; playlistId: number }) {
-    return this.prisma.playlist.update({
-      where: { id: data.playlistId },
+  async createPlaylist(data: {
+    userId: number;
+    imagePath: string;
+    playlistName: string;
+    description: string;
+  }) {
+    return await this.prisma.playlists.create({
       data: {
-        followers: {
-          disconnect: { id: data.userId },
+        user_id: data.userId,
+        image_path: data.imagePath,
+        playlist_name: data.playlistName,
+        description: data.description,
+        create_date: new Date(),
+      },
+    });
+  }
+
+  async getPlaylistDetail(playlistId: number) {
+    return await this.prisma.playlists.findUnique({
+      where: { id: playlistId },
+      include: {
+        playlist_songs: {
+          include: { songs: true },
         },
       },
     });
   }
 
-  sendFollow(data: { userId: number; followingId: number }) {
-    try {
-      return this.prisma.user.update({
-        where: { id: data.userId },
-        data: {
-          following: {
-            connect: { id: data.followingId },
-          },
-        },
-      });
-    } catch (error) {
-      throw new Error(`Failed to follow user: ${error.message}`);
-    }
+  async sendFollow(data: { userId: number; followingId: number }) {
+    return await this.prisma.list_friends.create({
+      data: {
+        user_id: data.userId,
+        friend_id: data.followingId,
+        room_chat: `room_${data.userId}_${data.followingId}`,
+      },
+    });
   }
 
-  playMusic(data: { songId: number; userId: number }) {
+  async playMusic(data: { songId: number; userId: number }) {
     try {
-      // Optional: Log the playback in a separate table or update viewer count
-      this.prisma.song.update({
-        where: { songId: data.songId },
+      await this.prisma.songs.update({
+        where: { song_id: data.songId },
         data: {
           viewer: {
             increment: 1,
@@ -106,9 +132,8 @@ export class AppService {
         },
       });
 
-      // Optionally return the song info
-      const song = this.prisma.song.findUnique({
-        where: { songId: data.songId },
+      const song = await this.prisma.songs.findUnique({
+        where: { song_id: data.songId },
       });
 
       return {
@@ -120,33 +145,12 @@ export class AppService {
     }
   }
 
-  async createPlaylist(data: {
-    userId: number;
-    imagePath: string;
-    playlistName: string;
-    description: string;
-  }) {
-    return await this.prisma.playlist.create({
-      data: {
-        userId: data.userId,
-        imagePath: data.imagePath,
-        playlistName: data.playlistName,
-        description: data.description,
-        createDate: new Date(),
-      },
-    });
-  }
-
-  async getPlaylistDetail(playlistId: number) {
-    return await this.prisma.playlist.findUnique({
+  async unfollowPlaylist(data: { userId: number; playlistId: number }) {
+    return await this.prisma.playlist_follows.delete({
       where: {
-        id: playlistId,
-      },
-      include: {
-        PlaylistSongs: {
-          include: {
-            Song: true, // Include songs data in playlist
-          },
+        user_id_playlist_id: {
+          user_id: data.userId,
+          playlist_id: data.playlistId,
         },
       },
     });

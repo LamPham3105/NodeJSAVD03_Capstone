@@ -6,32 +6,32 @@ export class AppService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getAllGenres() {
-    return await this.prisma.genre.findMany({
+    return await this.prisma.genres.findMany({
       select: {
-        genreId: true,
-        nameGenre: true,
-        createTime: true,
+        genre_id: true,
+        name_genre: true,
+        create_time: true,
       },
     });
   }
 
   async findSongById(songId: number) {
-    return await this.prisma.song.findUnique({
-      where: { songId },
+    return await this.prisma.songs.findUnique({
+      where: { song_id: songId },
       include: {
-        genre: true, // Include genre info if needed
+        genres: true, // Include genre info if needed
       },
     });
   }
 
   async getAllSongs() {
-    return await this.prisma.song.findMany({
+    return await this.prisma.songs.findMany({
       select: {
-        songId: true,
-        songName: true,
+        song_id: true,
+        song_name: true,
         description: true,
-        publicDate: true,
-        genre: true,
+        public_date: true,
+        genres: true,
         duration: true,
         viewer: true,
       },

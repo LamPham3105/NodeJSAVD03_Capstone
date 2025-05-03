@@ -15,7 +15,7 @@ export class AppService {
   ) {}
 
   async deleteFriend(id: number) {
-    const friendship = await this.prismaService.friend.findUnique({
+    const friendship = await this.prismaService.list_friends.findUnique({
       where: { id },
     });
 
@@ -23,7 +23,7 @@ export class AppService {
       throw new Error('Friendship not found');
     }
 
-    return await this.prismaService.friend.delete({
+    return await this.prismaService.list_friends.delete({
       where: { id },
     });
   }
@@ -33,11 +33,11 @@ export class AppService {
     friendId: number;
     roomChat: string;
   }) {
-    const existingFriendship = await this.prismaService.friend.findFirst({
+    const existingFriendship = await this.prismaService.list_friends.findFirst({
       where: {
         OR: [
-          { userId: data.userId, friendId: data.friendId },
-          { userId: data.friendId, friendId: data.userId },
+          { user_id: data.userId, friend_id: data.friendId },
+          { user_id: data.friendId, friend_id: data.userId },
         ],
       },
     });
@@ -46,26 +46,24 @@ export class AppService {
       throw new Error('Friendship already exists');
     }
 
-    return await this.prismaService.friend.create({
+    return await this.prismaService.list_friends.create({
       data: {
-        userId: data.userId,
-        friendId: data.friendId,
-        roomChat: data.roomChat,
+        user_id: data.userId,
+        friend_id: data.friendId,
+        room_chat: data.roomChat,
       },
     });
   }
 
   async createUser(userData: {
-    firstName: string;
-    lastName: string;
-    username: string;
+    name: string;
+    account: string;
     email: string;
-    phoneNumber: string;
     password: string;
   }): Promise<any> {
     try {
       const existingUser = await this.prismaService.users.findUnique({
-        where: { username: userData.username },
+        where: { account: userData.account },
       });
 
       if (existingUser) {
@@ -74,42 +72,33 @@ export class AppService {
 
       // Check if the email already exists
       const existingEmail = await this.prismaService.users.findUnique({
-        where: { email: userData.email },
+        where: { account: userData.email }, // Ensure email uniqueness with 'account' if necessary
       });
 
       if (existingEmail) {
         return { success: false, message: 'Email already exists' };
       }
 
-      // Check if the phone number already exists
-      const existingPhoneNumber = await this.prismaService.users.findUnique({
-        where: { phone_number: userData.phoneNumber }, // Changed to camelCase
-      });
-
-      if (existingPhoneNumber) {
-        return { success: false, message: 'Phone number already exists' };
-      }
-
-      // Hash the password (no need to manually generate salt)
+      // Hash the password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
       // Create the user in the database
       const newUser = await this.prismaService.users.create({
         data: {
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          username: userData.username,
-          email: userData.email,
-          phone_number: userData.phoneNumber, // Changed to camelCase
+          account: userData.account,
+          name: userData.name,
+          nationality: '',
+          chanal_name: '',
+          avatar: '',
+          desciption: '',
+          refresh_token: '',
           password: hashedPassword,
+          role: 'user',
         },
         select: {
-          id: true,
-          first_name: true,
-          last_name: true,
-          username: true,
-          email: true,
-          phone_number: true, // Changed to camelCase
+          user_id: true,
+          account: true,
+          name: true,
         },
       });
 
@@ -166,7 +155,7 @@ export class AppService {
 
   async getUserById(id: number) {
     const user = this.prismaService.users.findUnique({
-      where: { id: Number(id) },
+      where: { user_id: Number(id) },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -183,20 +172,20 @@ export class AppService {
     return null;
   }
 
-  async findByUsername(username?: string): Promise<any | null> {
+  async findByUsername(account?: string): Promise<any | null> {
     return this.prismaService.users.findUnique({
-      where: { username },
+      where: { account },
     });
   }
 
   async getAllUsers() {
-    return await this.prismaService.user.findMany({
+    return await this.prismaService.users.findMany({
       select: {
-        userId: true,
+        user_id: true,
         account: true,
         name: true,
         nationality: true,
-        chanalName: true,
+        chanal_name: true,
         avatar: true,
         desciption: true,
         banner: true,
@@ -206,8 +195,8 @@ export class AppService {
   }
 
   async findDiscuss(discussId: number) {
-    return await this.prismaService.discuss.findUnique({
-      where: { discussId },
+    return await this.prismaService.comments.findUnique({
+      where: { discuss_id: discussId },
       include: {
         comments: true,
       },
@@ -215,14 +204,14 @@ export class AppService {
   }
 
   async findUser(userId: number) {
-    return await this.prismaService.user.findUnique({
-      where: { userId },
+    return await this.prismaService.users.findUnique({
+      where: { user_id: userId },
       select: {
-        userId: true,
+        user_id: true,
         account: true,
         name: true,
         nationality: true,
-        chanalName: true,
+        chanal_name: true,
         avatar: true,
         desciption: true,
         banner: true,
@@ -232,10 +221,10 @@ export class AppService {
   }
 
   async isFollowing(userId: number, followingUserId: number) {
-    const following = await this.prismaService.follow.findFirst({
+    const following = await this.prismaService.list_friends.findFirst({
       where: {
-        userId,
-        followingUserId,
+        user_id: userId,
+        friend_id: followingUserId,
       },
     });
 
@@ -243,17 +232,26 @@ export class AppService {
   }
 
   async getListFriends(userId: number) {
-    return await this.prismaService.friend.findMany({
+    return await this.prismaService.list_friends.findMany({
       where: {
-        OR: [{ userId }, { friendId: userId }],
+        OR: [{ user_id: userId }, { friend_id: userId }],
       },
       select: {
-        userId: true,
-        friendId: true,
-        roomChat: true,
-        user: {
+        id: true,
+        user_id: true,
+        friend_id: true,
+        room_chat: true,
+        users_list_friends_user_idTousers: {
           select: {
-            userId: true,
+            user_id: true,
+            account: true,
+            name: true,
+            avatar: true,
+          },
+        },
+        users_list_friends_friend_idTousers: {
+          select: {
+            user_id: true,
             account: true,
             name: true,
             avatar: true,
@@ -264,16 +262,16 @@ export class AppService {
   }
 
   async getMessagesByRoom(roomChat: string) {
-    return await this.prismaService.message.findMany({
-      where: { roomChat },
+    return await this.prismaService.messages.findMany({
+      where: { room_chat: roomChat },
       select: {
         id: true,
-        senderId: true,
-        content: true,
-        timeSend: true,
+        id_sender: true,
+        content_mess: true,
+        time_send: true,
       },
       orderBy: {
-        timeSend: 'asc',
+        time_send: 'asc',
       },
     });
   }

@@ -5,9 +5,7 @@ import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class PlaylistService {
-  constructor(
-    @Inject('RESTAURANT_NAME') private playlistService: ClientProxy,
-  ) {}
+  constructor(@Inject('PLAYLIST_NAME') private playlistService: ClientProxy) {}
 
   async getAllPlaylists() {
     return await lastValueFrom(
