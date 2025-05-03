@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  api_gateway:
+    container_name: api_gateway
+    build: ./api_gateway
+    ports:
+      - 8080:8080
+    networks:
+      - node-network
+
+  playlist_service:
+    container_name: playlist_service
+    build: ./playlist-service
+    networks:
+      - node-network
+
+  song_service:
+    container_name: song_service
+    build: ./song-service
+    networks:
+      - node-network
+
+  user_service:
+    container_name: user_service
+    build: ./user-service
+    networks:
+      - node-network
+
+networks:
+  node-network:
+    external: true
