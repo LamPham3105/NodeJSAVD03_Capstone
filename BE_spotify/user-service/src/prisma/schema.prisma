@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model comments {
+  discuss_id        Int        @id @default(autoincrement())
+  user_id           Int?
+  song_id           Int?
+  content           String
+  discuss_date      DateTime?  @default(now()) @db.Timestamp(6)
+  replay_discuss_id Int?
+  comments          comments?  @relation("commentsTocomments", fields: [replay_discuss_id], references: [discuss_id], onDelete: NoAction, onUpdate: NoAction)
+  other_comments    comments[] @relation("commentsTocomments")
+  songs             songs?     @relation(fields: [song_id], references: [song_id], onDelete: NoAction, onUpdate: NoAction)
+  users             users?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model genres {
+  genre_id    Int       @id @default(autoincrement())
+  name_genre  String    @db.VarChar(100)
+  create_time DateTime? @default(now()) @db.Timestamp(6)
+  songs       songs[]
+}
+
+model list_friends {
+  id                                  Int     @id @default(autoincrement())
+  user_id                             Int?
+  friend_id                           Int?
+  room_chat                           String? @db.VarChar(255)
+  users_list_friends_friend_idTousers users?  @relation("list_friends_friend_idTousers", fields: [friend_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users_list_friends_user_idTousers   users?  @relation("list_friends_user_idTousers", fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model messages {
+  id           Int       @id @default(autoincrement())
+  id_sender    Int?
+  content_mess String?
+  time_send    DateTime? @default(now()) @db.Timestamp(6)
+  room_chat    String?   @db.VarChar(255)
+  users        users?    @relation(fields: [id_sender], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model playlist_songs {
+  id          Int        @id @default(autoincrement())
+  playlist_id Int?
+  song_id     Int?
+  playlists   playlists? @relation(fields: [playlist_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs       songs?     @relation(fields: [song_id], references: [song_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model playlists {
+  id             Int              @id @default(autoincrement())
+  user_id        Int?
+  image_path     String?
+  playlist_name  String?          @db.VarChar(255)
+  description    String?
+  create_date    DateTime?        @default(now()) @db.Timestamp(6)
+  playlist_songs playlist_songs[]
+  users          users?           @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model songs {
+  song_id         Int              @id @default(autoincrement())
+  user_id         Int?
+  genre_id        Int?
+  song_name       String           @db.VarChar(255)
+  viewer          Int?             @default(0)
+  duration        String?          @db.VarChar(10)
+  popular         Boolean?         @default(false)
+  description     String?
+  song_image      String?
+  public_date     DateTime?        @db.Timestamp(6)
+  file_path       String?
+  discuss_quality Int?
+  comments        comments[]
+  playlist_songs  playlist_songs[]
+  genres          genres?          @relation(fields: [genre_id], references: [genre_id], onDelete: NoAction, onUpdate: NoAction)
+  users           users?           @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model users {
+  user_id                                    Int            @id @default(autoincrement())
+  account                                    String         @unique @db.VarChar(100)
+  name                                       String         @db.VarChar(100)
+  nationality                                String?        @db.VarChar(100)
+  chanal_name                                String?        @db.VarChar(100)
+  avatar                                     String?
+  desciption                                 String?
+  refresh_token                              String?
+  password                                   String
+  banner                                     String?
+  role                                       user_role
+  comments                                   comments[]
+  list_friends_list_friends_friend_idTousers list_friends[] @relation("list_friends_friend_idTousers")
+  list_friends_list_friends_user_idTousers   list_friends[] @relation("list_friends_user_idTousers")
+  messages                                   messages[]
+  playlists                                  playlists[]
+  songs                                      songs[]
+}
+
+enum user_role {
+  admin
+  Singer
+  user
+}
